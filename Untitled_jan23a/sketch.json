@@ -1,0 +1,9 @@
+{
+  "cpu": {
+    "fqbn": "",
+    "name": "",
+    "type": "serial"
+  },
+  "secrets": [],
+  "included_libs": []
+}
