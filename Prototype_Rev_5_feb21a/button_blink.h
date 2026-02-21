@@ -1,6 +1,6 @@
-#define BUTTON_PIN 8
-#define BUZZER_PIN 6
-#define LED_PIN 7
+#define BUTTON_PIN 7
+#define BUZZER_PIN 5
+#define LED_PIN 6
 
 typedef enum {UP=0, DOWN, PRESS, RELEASE} ButtonState;
 
