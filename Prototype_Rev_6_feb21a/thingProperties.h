@@ -3,20 +3,24 @@
 #include <ArduinoIoTCloud.h>
 #include <Arduino_ConnectionHandler.h>
 
-#define BUTTON_PIN 8
-#define BUZZER_PIN 6
-#define LED_PIN 7
+#define BUTTON_PIN 20
+#define BUZZER_PIN 7
+#define LED_PIN 21
 
 typedef enum {UP=0, DOWN, PRESS, RELEASE} ButtonState;
 
 ButtonState current_state = UP;
 ButtonState past_state = UP;
 
+volatile bool buttonChanged = false;
+
+ButtonState fsm(int i_pin, ButtonState state_current);
+
 const char DEVICE_LOGIN_NAME[]  = "3dabd68e-de6b-4b71-980b-18357ee4a025";
 
-const char SSID[]               = SECRET_SSID;    // Network SSID (name)
-const char PASS[]               = SECRET_OPTIONAL_PASS;    // Network password (use for WPA, or use as key for WEP)
-const char DEVICE_KEY[]  = SECRET_DEVICE_KEY;    // Secret device password
+const char SSID[]               = "TP-LINK_AB76_5G";    // Network SSID (name)
+const char PASS[]               = "21940521";    // Network password (use for WPA, or use as key for WEP)
+const char DEVICE_KEY[]  = "7rD1tWsC8j8utoacE9w3S1alQ";    // Secret device password
 
 
 
@@ -24,7 +28,59 @@ void initProperties(){
 
   ArduinoCloud.setBoardId(DEVICE_LOGIN_NAME);
   ArduinoCloud.setSecretDeviceKey(DEVICE_KEY);
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(BUTTON_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+  digitalWrite(LED_PIN, LOW);
 
 }
 
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
+
+ButtonState fsm(int i_pin, ButtonState state_current){
+  //Look for button press
+  const static unsigned long debounce_t = 50;
+  static unsigned long last_bounce = millis();
+  bool reading = digitalRead(i_pin);
+  static bool last_reading = LOW;
+  // Guard rails on button press
+  if (reading!=last_reading) {
+    last_bounce = millis();
+  }
+
+  if (millis() - last_bounce >= debounce_t){
+    switch(state_current){
+      case UP:
+        if (reading == DOWN) {state_current = PRESS;}
+        break;
+      case DOWN:
+        if (reading == UP) {state_current = RELEASE;}
+        break;
+      case PRESS:
+        state_current = DOWN;
+        break;
+      case RELEASE:
+        state_current = UP;
+        break;
+    } 
+  }
+  last_reading = reading;
+  return state_current;
+}
+
+void onButtonControlChange()  {
+  // Add your code here to act upon BuzzerControl change
+  digitalWrite(BUZZER_PIN, HIGH); // Turn on buzzer
+  digitalWrite(LED_PIN, HIGH);
+  delay(500); // Pause for a second 
+  digitalWrite(BUZZER_PIN, LOW); // Turn off buzzer
+  digitalWrite(LED_PIN,LOW);
+  delay(250); // Pause for a second 
+  digitalWrite(BUZZER_PIN, HIGH); // Turn ON buzzer
+  digitalWrite(LED_PIN, HIGH);
+  delay(500); // Pause for a second 
+  digitalWrite(BUZZER_PIN, LOW); // Turn off buzzer
+  digitalWrite(LED_PIN,LOW);
+
+}
