@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "104263844807",
+    "project_id": "flamingjitterbug-ae3ab",
+    "storage_bucket": "flamingjitterbug-ae3ab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:104263844807:android:2da27bf41aa9a079928fe2",
+        "android_client_info": {
+          "package_name": "com.example.jitterbugapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCr0nqurxPh7iGDSohQUR9fOEOUIRQbrkE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
