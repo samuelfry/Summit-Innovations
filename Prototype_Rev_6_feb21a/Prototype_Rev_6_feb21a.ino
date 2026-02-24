@@ -35,6 +35,7 @@ void loop() {
   ArduinoCloud.update();
   Serial.print(millis());
   Serial.print(" ");
+  //my name is samuel fry
   Serial.println(current_state);
   // Your code here
   current_state = fsm(BUTTON_PIN, current_state);
