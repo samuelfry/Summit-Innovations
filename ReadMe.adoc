@@ -1,25 +1,23 @@
-:Author: samfry3
-:Email:
-:Date: 17/01/2026
-:Revision: version#
+:Author: Summit Innovations
+:Email: frysamuel6@gmail.com
+:Date: 15/01/2026
+:Revision: version#0.3
 :License: Public Domain
 
-= Project: {Project}
+= Project: Summit Hearing 0.1
 
-Describe your project
+IoT project designed to help mixed deaf households communicate when out of sight. STRAPPED offers communication between two devices - a mother and child device -, vibrating when a transmission is sent. The project uses an Arduino MKR WIFI 1010 as the child device and the desktop as the mother device. When a click is made, a signal will be send to the microcontroller, initiating a buzz on a coin-vibrator. A signal can be sent back via a push button, indicating that the message was received and the child device is moving towards the mother device. 
+
 
 == Step 1: Installation
 Please describe the steps to install this project.
 
-For example:
-
-1. Open this file
-2. Edit as you like
-3. Release to the World!
+1. Attach a 3.3V battery to the microcontroller. 
+2. Keep the mother and child device within 25 feet of eachother when communicating
 
 == Step 2: Assemble the circuit
 
-Assemble the circuit following the diagram layout.png attached to the sketch
+SCHEMATIC IS FORTHCOMING
 
 == Step 3: Load the code
 
@@ -56,3 +54,18 @@ Add the bill of the materials you need for this project.
 This document is written in the _AsciiDoc_ format, a markup language to describe documents. 
 If you need help you can search the http://www.methods.co.nz/asciidoc[AsciiDoc homepage]
 or consult the http://powerman.name/doc/asciidoc[AsciiDoc cheatsheet]
+
+=== Changelog
+- 1/13/2026 Arduino MKR WiFi 1010 was received 
+- 1/14/2026 Arduino MKR WiFi 1010 was configured
+- 1/15/2026 Arduino MKR WiFi 1010 is able to sent digital pulses to LED
+- 1/16/2026 Arduino MKR WiFi 1010 connected successfully to the internet
+- 1/17/2026 Arduino MKR WiFi 1010 is battery-powered and disconnected from the computer USB
+- 1/20/2026 Arduino MKR WiFi 1010 successfully outputted voltage to vibration motor
+- 1/21/2026 Implemented button logic to light up an LED
+- 1/23/2026 Attached Thing to ESP32S3
+- 1/27/2026 ESP32S3 added battery functionality
+- 1/27/2026 Put in housing for further testing
+- 1/30/2026 Added LED_PIN functionality for led blink
+- 2/2/2026 Made Thing unique to prototype (Rev 6)
+- 2/13/2026 Added App functionality and global variable
