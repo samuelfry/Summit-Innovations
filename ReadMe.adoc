@@ -69,3 +69,4 @@ or consult the http://powerman.name/doc/asciidoc[AsciiDoc cheatsheet]
 - 1/30/2026 Added LED_PIN functionality for led blink
 - 2/2/2026 Made Thing unique to prototype (Rev 6)
 - 2/13/2026 Added App functionality and global variable
+- 2/26/2026 Made Revision 7, making device smaller with smaller battery. Similar functionality though.
