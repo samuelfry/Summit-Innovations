@@ -1,12 +1,12 @@
 :Author: Summit Innovations
 :Email: frysamuel6@gmail.com
-:Date: 15/01/2026
+:Date: 01/15/2026
 :Revision: version#0.3
 :License: Public Domain
 
 = Project: Summit Hearing 0.1
 
-IoT project designed to help mixed deaf households communicate when out of sight. JitterBug offers communication between two devices - a mother and child device -, vibrating when a transmission is sent. The project uses an Arduino MKR WIFI 1010 as the child device and the desktop as the mother device. When a click is made, a signal will be send to the microcontroller, initiating a buzz on a coin-vibrator. A signal can be sent back via a push button, indicating that the message was received and the child device is moving towards the mother device. 
+IoT project designed to help mixed deaf households communicate when out of sight. JitterBug offers communication between two devices - a mother and child device -, vibrating when a transmission is sent. The project uses an XIAO ESP32 C3 as the child device and a digital app as the mother device. When a click is made, a signal will be send to the microcontroller, initiating a buzz on a coin-vibrator. A signal can be sent back via a push button, indicating that the message was received and the child device is moving towards the mother device. 
 
 
 == Step 1: Installation
@@ -70,3 +70,4 @@ or consult the http://powerman.name/doc/asciidoc[AsciiDoc cheatsheet]
 - 2/2/2026 Made Thing unique to prototype (Rev 6)
 - 2/13/2026 Added App functionality and global variable
 - 2/26/2026 Made Revision 7, making device smaller with smaller battery. Similar functionality though.
+- 3/4/2026 Made Revision 8, connecting device to Firebase
