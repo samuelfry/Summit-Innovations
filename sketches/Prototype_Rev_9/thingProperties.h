@@ -7,14 +7,13 @@
 #define BUTTON_PIN 4
 #define BUZZER_PIN 6
 #define LED_PIN 20
-#define V_PIN 5V
 
 typedef enum {UP=0, DOWN, PRESS, RELEASE} ButtonState;
 
 const char* ssid = "BYU-WiFi";
 const char* password = "";
 const String url = "https://flamingjitterbug-ae3ab-default-rtdb.firebaseio.com/";
-const String ext = "devices/xiao01.json";
+const String ext = "devices/xiao01/";
 
 ButtonState current_state = UP;
 ButtonState past_state = UP;
@@ -53,7 +52,7 @@ void initProperties(){
   String package = "{\"status\":\"online\"}";
   Serial.println("Connecting to database...");
   Serial.println("Status: ");
-  Serial.print(database_con(url+ext, "Content-Type", "application/json", package));
+  Serial.print(send_mes(url+ext+"online.json", "Content-Type", "application/json", package));
   // attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonInt, CHANGE);
 }
 
