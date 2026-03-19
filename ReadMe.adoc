@@ -72,3 +72,4 @@ or consult the http://powerman.name/doc/asciidoc[AsciiDoc cheatsheet]
 - 2/26/2026 Made Revision 7, making device smaller with smaller battery. Similar functionality though.
 - 3/4/2026 Made Revision 8, connecting device to Firebase
 - 3/16/2026 Made Revision 9, connecting device to App and creating app logic
+- 3/18/2026 Finished defining finite states for app and microcontroller, optimized button functionality and socket connection polling
