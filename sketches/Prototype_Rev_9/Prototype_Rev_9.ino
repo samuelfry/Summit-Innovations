@@ -1,3 +1,5 @@
+/*Suumit Innovations JitterBug*/
+
 #pragma once
 
 #include "thingProperties.h"
