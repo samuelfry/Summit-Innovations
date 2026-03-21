@@ -11,8 +11,8 @@
 typedef enum {UP=0, DOWN, PRESS, RELEASE} ButtonState;
 typedef enum {S1=0, S2, S3} AppState;
 
-const char* ssid = "TP-LINK_AB77";
-const char* password = "21940521";
+const char* ssid = "BYU-WiFi";
+const char* password = "";
 const String url = "https://flamingjitterbug-ae3ab-default-rtdb.firebaseio.com/";
 const String ext = "devices/xiao01/";
 
