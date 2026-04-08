@@ -73,3 +73,5 @@ or consult the http://powerman.name/doc/asciidoc[AsciiDoc cheatsheet]
 - 3/4/2026 Made Revision 8, connecting device to Firebase
 - 3/16/2026 Made Revision 9, connecting device to App and creating app logic
 - 3/18/2026 Finished defining finite states for app and microcontroller, optimized button functionality and socket connection polling
+- 3/20/2026 Shifted to new prototype (Ripple Glasses)
+- 4/8/2026 Completed Rev 1.3, able to capture sound bites 5 seconds in length
