@@ -3,25 +3,38 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include "wifi_connect.h"
-#include <ESP_I2S.h>
+// #include <ESP_I2S.h>
+#include "config.h"
 
+//Pin definitions
 #define BUTTON_PIN 43
+#define I2S_WS 8
+#define I2S_SCK 7
+#define I2S_SD 9
 
+//Mic recording definitions
 #define V_REF 3.3
 #define SAMPLE_RATE 16000 //Samples per second
-#define BYTES_PER_SAMPLE 2
-#define CHUNK_SECONDS 5
+#define BYTES_PER_RAW_SAMPLE 4
+#define BYTES_PER_FULL_SAMPLE 3
+#define CHUNK_SECONDS 10
 #define SAMPLES_PER_CHUNK (SAMPLE_RATE*CHUNK_SECONDS)
-#define CHUNK_BYTES (SAMPLES_PER_CHUNK * BYTES_PER_SAMPLE)
-#define VOLUME_GAIN 3
+#define RAW_CHUNK_BYTES (SAMPLES_PER_CHUNK * BYTES_PER_RAW_SAMPLE)
+#define FULL_CHUNK_BYTES (SAMPLES_PER_CHUNK * BYTES_PER_FULL_SAMPLE)
+#define VOLUME_GAIN 0
 
+//Button states
 typedef enum {UP=0, DOWN, PRESS, RELEASE} ButtonState;
+
+//Mic states
 typedef enum {IDLE, RECORDING, UPLOADING} MicState;
 
-const char* ssid = "BYU-WiFi"; //TP-LINK_AB77 //BYU-WiFi
-const char* password = ""; //21940521
+//Wifi/Database keys
+const char* ssid = "TP-LINK_AB77"; //TP-LINK_AB77 //BYU-WiFi
+const char* password = "21940521"; //21940521
 const String url = "https://gctbnsjsridmsilzqtpq.storage.supabase.co/storage/v1/object";
 const String audio_ext = "/audio/public/esp32c3";
+const String access_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdGJuc2pzcmlkbXNpbHpxdHBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNjM0ODksImV4cCI6MjA5MDYzOTQ4OX0.T7OdeAuH0AM0a8YdzWAcwH1e6rkGFaL4stL4DWttbZg";
 
 ButtonState current_state = UP;
 ButtonState past_state = UP;
@@ -30,28 +43,33 @@ MicState audio_state = IDLE;
 
 HTTPClient home;
 
-const String access_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdGJuc2pzcmlkbXNpbHpxdHBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNjM0ODksImV4cCI6MjA5MDYzOTQ4OX0.T7OdeAuH0AM0a8YdzWAcwH1e6rkGFaL4stL4DWttbZg";
+// I2SClass I2S;
 
-I2SClass I2S;
-
-int16_t* audio_buffer = NULL;
+int32_t* raw_buffer = NULL;
+uint8_t * audio_buffer = NULL;
 
 
 void initProperties(){
-
+  //Configure button
   pinMode(BUTTON_PIN, INPUT_PULLUP);
-  I2S.setPinsPdmRx(42, 41);
-  while (!I2S.begin(I2S_MODE_PDM_RX, 16000, I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO)) {
-    Serial.println("Failed to initialize I2S!");
-    delay (100); // do nothing
-  }
+  
+  //Configure I2S protocol
+  config_i2s();
+  // I2S.setPins(I2S_SCK, I2S_WS, -1, I2S_SD);
+  // while (!I2S.begin(I2S_MODE_STD, SAMPLE_RATE, I2S_DATA_BIT_WIDTH_32BIT, I2S_SLOT_MODE_MONO)) {
+  //   Serial.println("Failed to initialize I2S!");
+  //   delay (100); // do nothing
+  // }
 
-  audio_buffer = (int16_t*)ps_malloc(CHUNK_BYTES);
-  if (!audio_buffer) {
+  //Create PSRAM buffer
+  audio_buffer = (uint8_t*)ps_malloc(FULL_CHUNK_BYTES);
+  raw_buffer = (int32_t *)ps_malloc(RAW_CHUNK_BYTES);
+  if (!audio_buffer && !raw_buffer) {
     Serial.println("PSRAM allocation failed");
     while (1);
   }
 
+  //Connect to wifi
   Serial.println();
   Serial.println();
   Serial.print("Connecting to ");
@@ -68,12 +86,9 @@ void initProperties(){
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+
+  //Set up database socket
   home.setReuse(true);
-  // String package = "{\"status\":\"online\"}";
-  // Serial.println("Connecting to database...");
-  // Serial.println("Status: ");
-  // Serial.print(send_mes(home, url+ext+"online.json", "Content-Type", "application/json", package));
-  // attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonInt, CHANGE);
 }
 
 ButtonState fsmButton(int i_pin, ButtonState state_current){
@@ -108,9 +123,22 @@ ButtonState fsmButton(int i_pin, ButtonState state_current){
   return state_current;
 }
 
-void amplify_volume(int16_t* buffer) {
-  for(size_t i = 0; i < SAMPLES_PER_CHUNK; i ++) {
-    buffer[i] <<= VOLUME_GAIN;
+void amp_cov(int32_t* r_buffer, uint8_t* a_buffer) {
+  int32_t raw32;
+  for(size_t i = 0; i < SAMPLES_PER_CHUNK; i++) {
+    // Serial.print("Raw 32 bit integer: ");
+    // Serial.print(r_buffer[i], HEX);
+    // Serial.println();
+    raw32 = r_buffer[i] >> 8;
+    // raw32 <<= VOLUME_GAIN;
+    a_buffer[(i*3)] = (uint8_t)((int32_t)raw32 & 0xFF);
+    a_buffer[(i*3)+1] = (uint8_t)(((int32_t)raw32 >> 8) & 0xFF);
+    a_buffer[(i*3)+2] = (uint8_t)(((int32_t)raw32 >> 16) & 0xFF);     
+    // Serial.print("Full 24 bit integer: ");
+    // Serial.print(a_buffer[(i*3)], HEX);
+    // Serial.print(a_buffer[(i*3)+1], HEX);
+    // Serial.print(a_buffer[(i*3)+2], HEX);
+    // Serial.println();
   }
 }
 
@@ -135,12 +163,13 @@ int fsmrecordAndUpload(ButtonState current_state) {
     case RECORDING:
       //Actions to take while in state (recording and storing buffer)
       // Serial.println("Entered Recording state");
-      while (bytes_collected < CHUNK_BYTES) {
-        bytes_read = I2S.readBytes((char*)audio_buffer + bytes_collected, CHUNK_BYTES - bytes_collected);
-        bytes_collected += bytes_read;
+      // while (bytes_collected < RAW_CHUNK_BYTES) {
+      //   bytes_read = I2S.readBytes((char*)raw_buffer + bytes_collected, RAW_CHUNK_BYTES - bytes_collected);
+      //   bytes_collected += bytes_read;
         // Serial.print("Bytes collected this recording: ");
         // Serial.println(bytes_collected);
-      }
+      // }
+      i2s_read(I2S_PORT, raw_buffer, RAW_CHUNK_BYTES, &bytes_collected, portMAX_DELAY);
       // Serial.print("Upload time (ms): ");
       // Serial.println(upload_time);
       // Serial.print("Chunk limit: ");
@@ -152,9 +181,9 @@ int fsmrecordAndUpload(ButtonState current_state) {
       // Serial.print("This is the current_state: ");
       // Serial.println(current_state);
       // Serial.println("Entered upload if statement ");
-      // amplify_volume(audio_buffer);
+      amp_cov(raw_buffer, audio_buffer);
       obj_key = (String)(millis()) + ".wav";
-      response = upload_audio(home, url+audio_ext+obj_key, audio_buffer, CHUNK_BYTES, access_key);
+      response = upload_audio(home, url+audio_ext+obj_key, audio_buffer, FULL_CHUNK_BYTES, access_key);
       audio_state = IDLE;
       break;
     default:
