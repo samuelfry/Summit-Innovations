@@ -7,3 +7,4 @@ tensorflow-hub
 librosa
 pandas
 matplotlib
+supabase
