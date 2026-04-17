@@ -1,0 +1,9 @@
+numpy
+scipy
+opencv-python
+moviepy
+tensorflow
+tensorflow-hub
+librosa
+pandas
+matplotlib
