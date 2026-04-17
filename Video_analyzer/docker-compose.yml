@@ -1,0 +1,22 @@
+services:
+  video_analyzer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video_analyzer
+    working_dir: /workspaces/Video_analyzer
+    volumes:
+      - .:/workspaces/Video_analyzer
+    environment:
+      DISPLAY: :99
+    command: >
+      bash -lc "
+        apt-get update &&
+        apt-get install -y python3-tk xvfb &&
+        pip install --no-cache-dir -r requirements.txt supabase &&
+        Xvfb :99 -screen 0 1024x768x24 &
+        export DISPLAY=:99 &&
+        python audio_model.py
+      "
+    tty: true
+    stdin_open: true
