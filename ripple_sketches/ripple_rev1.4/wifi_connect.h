@@ -9,13 +9,31 @@ int reconnect(const char* ssid, const char* password) {
   return WiFi.begin(ssid, password);
 }
 
-// int send_mes(HTTPClient& database, const String& path, const char* header_type, const char* header, const String& mes){
-//   database.begin(path);
-//   database.addHeader(header_type, header);
-//   int code = database.PUT(mes);
-//   database.end();
-//   return code;
-// }
+void wifi_scan(){
+  int n = WiFi.scanNetworks(); // Scan for networks
+  Serial.println("Scan done");
+  if (n == 0) {
+    Serial.println("No networks found");
+  } else {
+    Serial.print(n);
+    Serial.println(" networks found");
+    for (int i = 0; i < n; ++i) {
+      Serial.print(i + 1);
+      Serial.print(": ");
+      Serial.print(WiFi.SSID(i)); // SSID
+      Serial.print(" (");
+      Serial.print(WiFi.RSSI(i)); // Signal strength
+    }
+  }
+}
+
+int send_mes(HTTPClient& database, const String& path, const char* header_type, const char* header, const String& mes){
+  database.begin(path);
+  database.addHeader(header_type, header);
+  int code = database.PUT(mes);
+  database.end();
+  return code;
+}
 
 // bool listen(HTTPClient& database, const String& path){
 //   //Find path name
@@ -82,11 +100,11 @@ int upload_audio(HTTPClient& database, const String& path, uint8_t* buffer, size
   database.addHeader("Content-Type", "audio/wav");
   database.addHeader("Authorization", "Bearer " + access_key);
   database.addHeader("apikey", access_key);
-  // database.addHeader("X-Upsert", "true");
+  // database.addHeader("x-upsert", "true");
   uint8_t* fullfile = (uint8_t*)malloc(44+size);
   memcpy(fullfile, header, 44);
   memcpy(fullfile+44, buffer, size);
-  int code = database.POST(fullfile, size+44);
+  int code = database.PUT(fullfile, size+44);
   // Serial.print("Database response: ");
   // Serial.println(code);
   // delay(1000);

@@ -17,7 +17,7 @@
 #define SAMPLE_RATE 16000 //Samples per second
 #define BYTES_PER_RAW_SAMPLE 4
 #define BYTES_PER_FULL_SAMPLE 3
-#define CHUNK_SECONDS 10
+#define CHUNK_SECONDS 2
 #define SAMPLES_PER_CHUNK (SAMPLE_RATE*CHUNK_SECONDS)
 #define RAW_CHUNK_BYTES (SAMPLES_PER_CHUNK * BYTES_PER_RAW_SAMPLE)
 #define FULL_CHUNK_BYTES (SAMPLES_PER_CHUNK * BYTES_PER_FULL_SAMPLE)
@@ -30,10 +30,10 @@ typedef enum {UP=0, DOWN, PRESS, RELEASE} ButtonState;
 typedef enum {IDLE, RECORDING, UPLOADING} MicState;
 
 //Wifi/Database keys
-const char* ssid = "TP-LINK_AB77"; //TP-LINK_AB77 //BYU-WiFi
-const char* password = "21940521"; //21940521
+const char* ssid = "SamuelF"; //TP-LINK_AB77 //BYU-WiFi //SamuelF
+const char* password = "samb@r@y"; //21940521 //samb@r@y
 const String url = "https://gctbnsjsridmsilzqtpq.storage.supabase.co/storage/v1/object";
-const String audio_ext = "/audio/public/esp32c3";
+const String audio_ext = "/audio/public/file_";
 const String access_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdGJuc2pzcmlkbXNpbHpxdHBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNjM0ODksImV4cCI6MjA5MDYzOTQ4OX0.T7OdeAuH0AM0a8YdzWAcwH1e6rkGFaL4stL4DWttbZg";
 
 ButtonState current_state = UP;
@@ -130,7 +130,7 @@ void amp_cov(int32_t* r_buffer, uint8_t* a_buffer) {
     // Serial.print(r_buffer[i], HEX);
     // Serial.println();
     raw32 = r_buffer[i] >> 8;
-    // raw32 <<= VOLUME_GAIN;
+    raw32 <<= VOLUME_GAIN;
     a_buffer[(i*3)] = (uint8_t)((int32_t)raw32 & 0xFF);
     a_buffer[(i*3)+1] = (uint8_t)(((int32_t)raw32 >> 8) & 0xFF);
     a_buffer[(i*3)+2] = (uint8_t)(((int32_t)raw32 >> 16) & 0xFF);     
@@ -152,15 +152,16 @@ int fsmrecordAndUpload(ButtonState current_state) {
   static int response = -1;
   static String obj_key;
   static size_t bytes_read;
-  switch(audio_state){
-    case IDLE:
-      response = -1;
-      if(current_state == DOWN) {
-        audio_state = RECORDING;
-        bytes_collected = 0;
-      }
-      break;
-    case RECORDING:
+  static int name = 0;
+  // switch(audio_state){
+  //   case IDLE:
+  //     response = -1;
+  //     if(current_state == DOWN) {
+  //       audio_state = RECORDING;
+  //       bytes_collected = 0;
+  //     }
+  //     break;
+  //   case RECORDING:
       //Actions to take while in state (recording and storing buffer)
       // Serial.println("Entered Recording state");
       // while (bytes_collected < RAW_CHUNK_BYTES) {
@@ -169,27 +170,28 @@ int fsmrecordAndUpload(ButtonState current_state) {
         // Serial.print("Bytes collected this recording: ");
         // Serial.println(bytes_collected);
       // }
-      i2s_read(I2S_PORT, raw_buffer, RAW_CHUNK_BYTES, &bytes_collected, portMAX_DELAY);
+  i2s_read(I2S_PORT, raw_buffer, RAW_CHUNK_BYTES, &bytes_read, portMAX_DELAY);
       // Serial.print("Upload time (ms): ");
       // Serial.println(upload_time);
       // Serial.print("Chunk limit: ");
       // Serial.println(CHUNK_BYTES);
-      audio_state = UPLOADING;
-      break;
-    case UPLOADING:
+  // audio_state = UPLOADING;
+    //   break;
+    // case UPLOADING:
       //upload payload
       // Serial.print("This is the current_state: ");
       // Serial.println(current_state);
       // Serial.println("Entered upload if statement ");
-      amp_cov(raw_buffer, audio_buffer);
-      obj_key = (String)(millis()) + ".wav";
-      response = upload_audio(home, url+audio_ext+obj_key, audio_buffer, FULL_CHUNK_BYTES, access_key);
-      audio_state = IDLE;
-      break;
-    default:
-      audio_state = IDLE;
-      break;
-  }
+  amp_cov(raw_buffer, audio_buffer);
+  obj_key =   "0.wav"; //(String)(name%2)+
+  response = upload_audio(home, url+audio_ext+obj_key, audio_buffer, FULL_CHUNK_BYTES, access_key);
+  name++;
+  // audio_state = IDLE;
+  //     break;
+  //   default:
+  //     audio_state = IDLE;
+  //     break;
+  // }
 
   return response;
   

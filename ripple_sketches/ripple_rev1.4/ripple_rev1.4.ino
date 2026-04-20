@@ -28,8 +28,9 @@ void loop() {
     // Serial.println("IP address: ");
     // Serial.println(WiFi.localIP());
   }
+  // wifi_scan();
     
-  current_state = fsmButton(BUTTON_PIN, current_state);
+  // current_state = fsmButton(BUTTON_PIN, current_state);
 
   // int32_t sample = I2S.read();
   // Serial.println(sample);
