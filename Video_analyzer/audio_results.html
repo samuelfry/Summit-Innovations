@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ripple Glasses</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      line-height: 1.5;
+      background-color: #f7f7f7;
+      color: #222;
+    }
+
+    h1 {
+      margin-bottom: 1rem;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .error {
+      color: #a80000;
+      font-weight: 600;
+    }
+
+    .realtime-indicator {
+      display: inline-block;
+      margin: 0.5rem 0 1rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid #bbb;
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: #f0f0f0;
+    }
+
+    .realtime-connecting {
+      color: #6d4c00;
+      background: #fff3cd;
+      border-color: #f3d47a;
+    }
+
+    .realtime-connected {
+      color: #0f5132;
+      background: #d1e7dd;
+      border-color: #86d3b0;
+    }
+
+    .realtime-error {
+      color: #842029;
+      background: #f8d7da;
+      border-color: #e59aa3;
+    }
+
+    .realtime-disconnected {
+      color: #41464b;
+      background: #e2e3e5;
+      border-color: #c6c8ca;
+    }
+
+    code {
+      background: #eee;
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ripple Glasses</h1>
+  <div id="status">Loading audio results...</div>
+  <div id="realtime-status" class="realtime-indicator realtime-connecting">Realtime: Connecting...</div>
+  <div id="results"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Replace these values with your Supabase project URL and anon key.
+    const SUPABASE_URL = "YOUR_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+
+    const statusEl = document.getElementById("status");
+    const realtimeStatusEl = document.getElementById("realtime-status");
+    const resultsEl = document.getElementById("results");
+    let supabaseClient = null;
+    let realtimeChannel = null;
+
+    function setRealtimeStatus(state, message) {
+      realtimeStatusEl.className = "realtime-indicator";
+      realtimeStatusEl.classList.add(`realtime-${state}`);
+      realtimeStatusEl.textContent = `Realtime: ${message}`;
+    }
+
+    function renderResults(data) {
+      statusEl.textContent = `Loaded ${data.length} result(s).`;
+      resultsEl.innerHTML = "";
+
+      if (!data.length) {
+        resultsEl.innerHTML = '<div class="card">No rows found in <code>wav_files</code>.</div>';
+        return;
+      }
+
+      data.forEach((row, index) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <h3>Record ${index + 1}</h3>
+          <p><strong>Environment:</strong> ${row.environment_result ?? "N/A"}</p>
+          <p><strong>Background Noise:</strong> ${row.background_noise_result ?? "N/A"}</p>
+          <p><strong>Confidence:</strong> ${row.confidence_result ?? "N/A"}</p>
+        `;
+        resultsEl.appendChild(card);
+      });
+    }
+
+    async function fetchAndRenderResults() {
+      const { data, error } = await supabaseClient
+        .from("wav_files")
+        .select("environment_result, background_noise_result, confidence_result");
+
+      if (error) {
+        throw error;
+      }
+
+      renderResults(data);
+    }
+
+    function setupRealtimeSubscription() {
+      setRealtimeStatus("connecting", "Connecting...");
+      realtimeChannel = supabaseClient
+        .channel("wav-files-live")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "wav_files" },
+          async () => {
+            try {
+              await fetchAndRenderResults();
+            } catch (err) {
+              statusEl.innerHTML = `<span class="error">Realtime refresh failed: ${err.message}</span>`;
+              setRealtimeStatus("error", "Refresh failed");
+            }
+          }
+        )
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            setRealtimeStatus("connected", "Connected");
+          } else if (status === "CHANNEL_ERROR") {
+            setRealtimeStatus("error", "Channel error");
+          } else if (status === "TIMED_OUT") {
+            setRealtimeStatus("error", "Timed out");
+          } else if (status === "CLOSED") {
+            setRealtimeStatus("disconnected", "Disconnected");
+          }
+        });
+    }
+
+    async function loadResults() {
+      if (
+        SUPABASE_URL === "YOUR_SUPABASE_URL" ||
+        SUPABASE_ANON_KEY === "YOUR_SUPABASE_ANON_KEY"
+      ) {
+        statusEl.innerHTML = '<span class="error">Set <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> in this file first.</span>';
+        setRealtimeStatus("error", "Credentials missing");
+        return;
+      }
+
+      try {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        await fetchAndRenderResults();
+        setupRealtimeSubscription();
+      } catch (err) {
+        statusEl.innerHTML = `<span class="error">Failed to load results: ${err.message}</span>`;
+        setRealtimeStatus("error", "Initial load failed");
+      }
+    }
+
+    loadResults();
+
+    window.addEventListener("beforeunload", async () => {
+      if (supabaseClient && realtimeChannel) {
+        await supabaseClient.removeChannel(realtimeChannel);
+        setRealtimeStatus("disconnected", "Disconnected");
+      }
+    });
+  </script>
+</body>
+</html>
