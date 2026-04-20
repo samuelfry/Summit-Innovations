@@ -4,6 +4,30 @@ import threading
 from datetime import datetime, timezone
 import requests
 from supabase import acreate_client, AsyncClient
+from realtime._async.client import AsyncRealtimeClient
+from realtime.types import ChannelStates
+
+# realtime<=2.28.3: _reconnect calls asyncio.wait([]) when nothing is in JOINED/JOINING,
+# which raises ValueError. Fixed upstream; patch until a release includes it.
+async def _reconnect_fixed(self: AsyncRealtimeClient) -> None:
+    self._ws_connection = None
+
+    to_rejoin = [
+        chan
+        for chan in self.channels.values()
+        if chan.state == ChannelStates.JOINED or chan.state == ChannelStates.JOINING
+    ]
+    for channel in to_rejoin:
+        channel.state = ChannelStates.ERRORED
+
+    await self.connect()
+
+    if self.is_connected:
+        for chan in to_rejoin:
+            await chan._rejoin()
+
+
+AsyncRealtimeClient._reconnect = _reconnect_fixed
 
 SUPABASE_URL = "https://gctbnsjsridmsilzqtpq.supabase.co"  # https://<project-ref>.supabase.co
 SUPABASE_KEY = "sb_publishable_DqbujbP_YcPdU1U4q6XjiA_XjqICfuA"  # anon/publishable is fine for reading public storage + listening

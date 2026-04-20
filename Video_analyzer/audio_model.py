@@ -3,11 +3,31 @@ import librosa
 import numpy as np
 import pandas as pd
 import os
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import threading
 import time
 import database_reader
 from supabase import create_client
+
+_YAMNET_LOCK = threading.Lock()
+_YAMNET_MODEL = None
+_YAMNET_LABELS = None
+
+
+def _yamnet_model_and_labels():
+    """Load YAMNet once; all inference must run under _YAMNET_LOCK."""
+    global _YAMNET_MODEL, _YAMNET_LABELS
+    if _YAMNET_MODEL is not None:
+        return _YAMNET_MODEL, _YAMNET_LABELS
+    situation_labels = pd.read_csv(
+        "./yamnet-tensorflow2-yamnet-v1/assets/yamnet_class_map.csv"
+    )["display_name"].tolist()
+    model = tf.saved_model.load("yamnet-tensorflow2-yamnet-v1")
+    _YAMNET_MODEL = model
+    _YAMNET_LABELS = situation_labels
+    return model, situation_labels
 
 # Initialize Supabase client for database updates
 SUPABASE_URL = "https://gctbnsjsridmsilzqtpq.supabase.co"
@@ -117,14 +137,9 @@ def plot_fourier_transform(wave_files, plot=False, identify=False):
             print(f"Plot saved as {output_filename}")
 
 def identify_sounds(audio_clips):
-    # Load situation labels from YAMNet class map
-    situation_labels = pd.read_csv('./yamnet-tensorflow2-yamnet-v1/assets/yamnet_class_map.csv')['display_name'].tolist()
-    
-    # Load the downloaded local YAMNet saved model
-    model = tf.saved_model.load('yamnet-tensorflow2-yamnet-v1')
-
-    # Get mappings
-    mappings = map_clips_to_situations(audio_clips, model, situation_labels)
+    with _YAMNET_LOCK:
+        model, situation_labels = _yamnet_model_and_labels()
+        mappings = map_clips_to_situations(audio_clips, model, situation_labels)
 
     # Return results for each audio sample
     # for i in range(len(audio_clips)):
@@ -161,26 +176,27 @@ def update_wav_file_record(file_path, environment_result, background_noise_resul
 
 # 4. Usage example
 if __name__ == '__main__':
+    _PROCESS_LOCK = threading.Lock()
+
     # Callback function to process downloaded files
     def process_audio_file(file_path):
         try:
-            print(f"\nProcessing: {file_path}")
-            sound_result = identify_sounds([file_path])[0]
-            background_noise = check_background(file_path)
-            file_name = os.path.basename(file_path)
-            
-            # Prepare results for database
-            environment_result = sound_result['situation'] if sound_result else "Unknown"
-            confidence_result = float(sound_result['confidence']) if sound_result else 0.0
-            background_noise_result = "Background Noise Detected" if background_noise else "No Background Noise"
-            
-            # Update database with results
-            update_wav_file_record(file_path, environment_result, background_noise_result, confidence_result)
-            
-            print(f"File: {file_name}")
-            print(f"Detected Situation: {environment_result}")
-            print(f"Confidence: {confidence_result:.2%}")
-            print(background_noise_result)
+            with _PROCESS_LOCK:
+                print(f"\nProcessing: {file_path}")
+                sound_result = identify_sounds([file_path])[0]
+                background_noise = check_background(file_path)
+                file_name = os.path.basename(file_path)
+
+                environment_result = sound_result['situation'] if sound_result else "Unknown"
+                confidence_result = float(sound_result['confidence']) if sound_result else 0.0
+                background_noise_result = "Background Noise Detected" if background_noise else "No Background Noise"
+
+                update_wav_file_record(file_path, environment_result, background_noise_result, confidence_result)
+
+                print(f"File: {file_name}")
+                print(f"Detected Situation: {environment_result}")
+                print(f"Confidence: {confidence_result:.2%}")
+                print(background_noise_result)
         except Exception as e:
             print(f"Error processing file {file_path}: {e}")
     
