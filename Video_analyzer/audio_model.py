@@ -7,6 +7,12 @@ import matplotlib.pyplot as plt
 import threading
 import time
 import database_reader
+from supabase import create_client
+
+# Initialize Supabase client for database updates
+SUPABASE_URL = "https://gctbnsjsridmsilzqtpq.supabase.co"
+SUPABASE_KEY = "sb_publishable_DqbujbP_YcPdU1U4q6XjiA_XjqICfuA"
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # 1. Load and preprocess audio
 def load_and_preprocess_audio(audio_path, sr=16000, duration=None):
@@ -127,7 +133,31 @@ def identify_sounds(audio_clips):
 
     return mappings
 
-
+def update_wav_file_record(file_path, environment_result, background_noise_result, confidence_result):
+    """Update wav_files table with audio analysis results"""
+    try:
+        # Extract filename from path
+        filename = os.path.basename(file_path)
+        
+        # Query for the record matching this file
+        response = supabase.table('wav_files').select('*').ilike('object_path', f'%{filename}%').execute()
+        
+        if response.data and len(response.data) > 0:
+            record = response.data[0]
+            record_id = record['public_id']
+            
+            # Update the record with analysis results
+            update_response = supabase.table('wav_files').update({
+                'environment_result': environment_result,
+                'background_noise_result': background_noise_result,
+                'confidence_result': confidence_result
+            }).eq('public_id', record_id).execute()
+            
+            print(f"Updated database record for {filename}")
+        else:
+            print(f"Warning: Could not find database record for {filename}")
+    except Exception as e:
+        print(f"Error updating database record: {e}")
 
 # 4. Usage example
 if __name__ == '__main__':
@@ -138,14 +168,19 @@ if __name__ == '__main__':
             sound_result = identify_sounds([file_path])[0]
             background_noise = check_background(file_path)
             file_name = os.path.basename(file_path)
+            
+            # Prepare results for database
+            environment_result = sound_result['situation'] if sound_result else "Unknown"
+            confidence_result = float(sound_result['confidence']) if sound_result else 0.0
+            background_noise_result = "Background Noise Detected" if background_noise else "No Background Noise"
+            
+            # Update database with results
+            update_wav_file_record(file_path, environment_result, background_noise_result, confidence_result)
+            
             print(f"File: {file_name}")
-            if sound_result:
-                print(f"Detected Situation: {sound_result['situation']}")
-                print(f"Confidence: {sound_result['confidence']:.2%}")
-            else:
-                print("No sound results available")
-            noise_text = "Background Noise Detected" if background_noise else "No Background Noise"
-            print(noise_text)
+            print(f"Detected Situation: {environment_result}")
+            print(f"Confidence: {confidence_result:.2%}")
+            print(background_noise_result)
         except Exception as e:
             print(f"Error processing file {file_path}: {e}")
     
@@ -159,6 +194,3 @@ if __name__ == '__main__':
             time.sleep(1)
     except KeyboardInterrupt:
         print("Shutting down...")
-
-
-
