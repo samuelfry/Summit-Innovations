@@ -8,3 +8,5 @@ librosa
 pandas
 matplotlib
 supabase
+requests
+realtime

@@ -1,11 +1,13 @@
 import os
 import asyncio
 import threading
+from collections import OrderedDict
 from datetime import datetime, timezone
 import requests
 from supabase import acreate_client, AsyncClient
 from realtime._async.client import AsyncRealtimeClient
 from realtime.types import ChannelStates
+import time
 
 # realtime<=2.28.3: _reconnect calls asyncio.wait([]) when nothing is in JOINED/JOINING,
 # which raises ValueError. Fixed upstream; patch until a release includes it.
@@ -41,6 +43,44 @@ TABLE_NAME = "wav_files"
 
 OBJECT_PATH_COLUMN = "object_path"  # Column that holds Storage object_name/path
 UPDATED_AT_COLUMN = "updated_at" # Column that holds a time stamp of when object was last updated
+
+# In-memory dedupe with TTL + max-size to avoid repeated processing loops
+# while keeping memory usage bounded for long-running processes.
+_EVENT_TTL_SECONDS = 24 * 60 * 60  # 24 hours
+_EVENT_MAX_KEYS = 50000
+_PROCESSED_EVENTS = OrderedDict()
+_PROCESSED_EVENTS_LOCK = threading.Lock()
+
+
+def _event_key(object_name: str, updated_at: str):
+    return object_name, updated_at
+
+
+def _mark_event_if_new(object_name: str, updated_at: str) -> bool:
+    """Return True only if this (object_name, updated_at) has not been seen."""
+    key = _event_key(object_name, updated_at)
+    now = time.monotonic()
+    with _PROCESSED_EVENTS_LOCK:
+        # Remove expired entries (oldest first due to OrderedDict insertion order).
+        cutoff = now - _EVENT_TTL_SECONDS
+        while _PROCESSED_EVENTS:
+            oldest_key, oldest_seen = next(iter(_PROCESSED_EVENTS.items()))
+            if oldest_seen >= cutoff:
+                break
+            _PROCESSED_EVENTS.pop(oldest_key)
+
+        if key in _PROCESSED_EVENTS:
+            # Refresh recency to preserve active keys when trimming by max size.
+            _PROCESSED_EVENTS.move_to_end(key)
+            return False
+
+        _PROCESSED_EVENTS[key] = now
+
+        # Enforce max-size bound by evicting oldest entries.
+        while len(_PROCESSED_EVENTS) > _EVENT_MAX_KEYS:
+            _PROCESSED_EVENTS.popitem(last=False)
+
+        return True
 
 
 def infer_project_ref(supabase_url: str) -> str:
@@ -78,18 +118,19 @@ async def main(on_file_downloaded=None):
         
         for file_data in existing_files:
             object_name = file_data.get(OBJECT_PATH_COLUMN)
+            existing_updated_at = file_data.get(UPDATED_AT_COLUMN)
             if not object_name:
                 continue
             
             url = public_storage_url(project_ref, WAV_BUCKET, object_name)
             filename = os.path.basename(object_name)
             dest_path = os.path.join(LOCAL_DIR, filename)
+            if existing_updated_at:
+                _mark_event_if_new(object_name, existing_updated_at)
             
             # Skip if already downloaded
             if os.path.exists(dest_path):
                 print(f"File already exists: {dest_path}")
-                if on_file_downloaded:
-                    on_file_downloaded(dest_path)
                 continue
             
             print(f"Downloading existing file: {object_name} -> {dest_path}")
@@ -122,9 +163,20 @@ async def main(on_file_downloaded=None):
             return
 
         object_name = data.get(OBJECT_PATH_COLUMN)
+        old_object_name = old_data.get(OBJECT_PATH_COLUMN)
 
         if not object_name:
             print("UPDATE received but object name missing:", payload)
+            return
+
+        # Avoid feedback loops: audio_model updates analysis columns on wav_files,
+        # which can emit UPDATE events without changing the storage object path.
+        if old_object_name is not None and object_name == old_object_name:
+            print("UPDATE received but object_path did not change; skipping.")
+            return
+
+        if not _mark_event_if_new(object_name, new_updated_at):
+            print("Duplicate update event detected; skipping.")
             return
 
         url = public_storage_url(project_ref, WAV_BUCKET, object_name)
