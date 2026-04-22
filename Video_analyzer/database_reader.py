@@ -50,6 +50,9 @@ _EVENT_TTL_SECONDS = 24 * 60 * 60  # 24 hours
 _EVENT_MAX_KEYS = 50000
 _PROCESSED_EVENTS = OrderedDict()
 _PROCESSED_EVENTS_LOCK = threading.Lock()
+_HEARTBEAT_SECONDS = 60
+_RECONNECT_BASE_DELAY_SECONDS = 1
+_RECONNECT_MAX_DELAY_SECONDS = 30
 
 
 def _event_key(object_name: str, updated_at: str):
@@ -103,6 +106,14 @@ def download_file(url: str, dest_path: str):
                     f.write(chunk)
 
 
+async def _download_and_process(url: str, dest_path: str, on_file_downloaded=None):
+    """Run blocking download/inference work off the asyncio event loop."""
+    await asyncio.to_thread(download_file, url, dest_path)
+    print("Saved:", dest_path)
+    if on_file_downloaded:
+        await asyncio.to_thread(on_file_downloaded, dest_path)
+
+
 async def main(on_file_downloaded=None):
     os.makedirs(LOCAL_DIR, exist_ok=True)
 
@@ -135,19 +146,20 @@ async def main(on_file_downloaded=None):
             
             print(f"Downloading existing file: {object_name} -> {dest_path}")
             try:
-                download_file(url, dest_path)
-                print("Saved:", dest_path)
-                if on_file_downloaded:
-                    on_file_downloaded(dest_path)
+                await _download_and_process(url, dest_path, on_file_downloaded=on_file_downloaded)
             except Exception as e:
                 print("Download failed:", e)
     except Exception as e:
         print("Failed to fetch existing files:", e)
 
+    last_event_time = time.monotonic()
+
     async def handle_update(payload):
+        nonlocal last_event_time
         event_data = payload.get("data", {})
         data = event_data.get("record", {})  # New record data
         old_data = event_data.get("old_record", {})  # Old record data (for updates)
+        last_event_time = time.monotonic()
 
         
         new_updated_at = data.get(UPDATED_AT_COLUMN)
@@ -185,11 +197,7 @@ async def main(on_file_downloaded=None):
 
         print(f"[{datetime.now(timezone.utc).isoformat()}] Downloading: {object_name} -> {dest_path}")
         try:
-            download_file(url, dest_path)
-            print("Saved:", dest_path)
-            # Call the callback if provided
-            if on_file_downloaded:
-                on_file_downloaded(dest_path)
+            await _download_and_process(url, dest_path, on_file_downloaded=on_file_downloaded)
         except Exception as e:
             print("Download failed:", e)
 
@@ -209,17 +217,37 @@ async def main(on_file_downloaded=None):
         print("Successfully subscribed to wav_files UPDATE events.")
     except Exception as e:
         print("Failed to subscribe to realtime updates:", e)
-        return  # Exit if subscription fails
+        raise RuntimeError("Subscription failed") from e
 
     print("Waiting for changes...")
+    last_heartbeat = time.monotonic()
     while True:
         await asyncio.sleep(10)
+        now = time.monotonic()
+        if now - last_heartbeat >= _HEARTBEAT_SECONDS:
+            channel_state = getattr(channel, "state", "unknown")
+            seconds_since_event = int(now - last_event_time)
+            print(
+                f"[heartbeat] channel_state={channel_state}, "
+                f"seconds_since_last_event={seconds_since_event}"
+            )
+            last_heartbeat = now
 
 
 def start_listener(on_file_downloaded=None):
     """Start the database listener in a non-blocking way"""
     def run_async():
-        asyncio.run(main(on_file_downloaded=on_file_downloaded))
+        delay = _RECONNECT_BASE_DELAY_SECONDS
+        while True:
+            try:
+                asyncio.run(main(on_file_downloaded=on_file_downloaded))
+                print("Listener exited; reconnecting with backoff...")
+            except Exception as e:
+                print(f"Listener crashed: {e}. Reconnecting with backoff...")
+
+            print(f"Retrying listener in {delay}s...")
+            time.sleep(delay)
+            delay = min(delay * 2, _RECONNECT_MAX_DELAY_SECONDS)
     
     listener_thread = threading.Thread(target=run_async, daemon=True)
     listener_thread.start()
