@@ -1,4 +1,6 @@
 numpy
+torch
+torchaudio
 scipy
 opencv-python
 moviepy
@@ -10,3 +12,4 @@ matplotlib
 supabase
 requests
 realtime
+deepfilternet
