@@ -35,6 +35,30 @@ int send_mes(HTTPClient& database, const String& path, const char* header_type, 
   return code;
 }
 
+// bool listen(HTTPClient& database, const String& path){
+//   //Find path name
+//   database.begin(path);
+//   int app_response = database.GET();
+//   // Serial.print("PingFromApp response: ");
+//   // Serial.println(httpCode);
+//   String payload;
+//   if (app_response) {
+//     payload = database.getString();
+//     // Serial.print("Payload: ");
+//     // Serial.println(payload);
+//   }
+//   database.end();
+//   Serial.print("PingFromApp response: ");
+//   Serial.println(payload); 
+//   //Sense if endpoint has change
+//   if (payload == "\"pressed\"") {
+//     return true;
+//   }
+//   else {
+//     return false;
+//   }
+// }
+
 void writeWavHeader(uint8_t* header, uint32_t dataSize, uint32_t sampleRate) {
   uint32_t fileSize = dataSize + 36;        // Total file size - 8
   uint16_t bitsPerSample = 24;
@@ -67,6 +91,9 @@ void writeWavHeader(uint8_t* header, uint32_t dataSize, uint32_t sampleRate) {
 }
 
 int upload_audio(HTTPClient& database, const String& path, uint8_t* buffer, size_t size, const String access_key){
+  // Serial.print("Entered Audio Upload");
+  // Serial.print("Database file path: ");
+  // Serial.println(path);
   uint8_t header[44];
   writeWavHeader(header, size, 16000);
   database.begin(path);
@@ -78,7 +105,15 @@ int upload_audio(HTTPClient& database, const String& path, uint8_t* buffer, size
   memcpy(fullfile, header, 44);
   memcpy(fullfile+44, buffer, size);
   int code = database.PUT(fullfile, size+44);
+  // Serial.print("Database response: ");
+  // Serial.println(code);
+  // delay(1000);
   free(fullfile);
   database.end();
+  // if (code != 200) {
+  //   Serial.printf("HTTP Response %d\n", code);
+  //   String response = database.getString();
+  //   Serial.printf("Error details: %s\n", response.c_str());
+  // }
   return code;
 }

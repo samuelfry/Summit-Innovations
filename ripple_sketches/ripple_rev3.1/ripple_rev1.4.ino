@@ -28,10 +28,23 @@ void loop() {
     // Serial.println("IP address: ");
     // Serial.println(WiFi.localIP());
   }
-  int response = fsmrecordAndUpload();
+  // wifi_scan();
+    
+  // current_state = fsmButton(BUTTON_PIN, current_state);
+
+  // int32_t sample = I2S.read();
+  // Serial.println(sample);
+  
+  // Serial.print(millis());
+  // Serial.print(" ");
+  // Serial.println(current_state);
+  // Serial.println(past_state);
+  //recording fsm (contains uploading logic)
+  int response = fsmrecordAndUpload(current_state);
   if (response != -1) {
     Serial.print("Supabase response: ");
     Serial.println(response);
   }
+  past_state = current_state;
 }
 

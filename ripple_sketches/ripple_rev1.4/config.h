@@ -2,9 +2,9 @@
 
 #include <driver/i2s.h>
 
-#define I2S_WS 8
-#define I2S_SCK 7
-#define I2S_SD 9
+#define I2S_WS 27
+#define I2S_SCK 14
+#define I2S_SD 32
 #define I2S_PORT I2S_NUM_0
 
 
