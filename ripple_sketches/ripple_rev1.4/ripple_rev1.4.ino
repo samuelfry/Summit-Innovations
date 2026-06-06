@@ -20,6 +20,7 @@ void setup() {
 
 void loop() {
   //Managing WiFi connection
+  static int reponse;
   status = WiFi.status();
   // Serial.println("WiFi status: ");
   // Serial.println(status);
@@ -28,7 +29,7 @@ void loop() {
     // Serial.println("IP address: ");
     // Serial.println(WiFi.localIP());
   }
-  int response = fsmrecordAndUpload();
+  response = fsmrecordAndUpload();
   if (response != -1) {
     Serial.print("Supabase response: ");
     Serial.println(response);
