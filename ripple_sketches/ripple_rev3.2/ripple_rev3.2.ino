@@ -5,6 +5,16 @@
 #include "thingProperties.h"
 #include "wifi_connect.h"
 
+/*
+NEW TASK PROCESS
+I want to use two separate tasks in order to make recording and sending more
+seamless. I want to have one task that will record half-second clips and another 
+that will send those clips. THIS ONLY WORKS IF THE SECOND TASK TAKES LESS THAN HALF
+A SECOND TO SEND. 
+I need to design each task, one using a record and amplify function (right now in
+fsmRecordandUpload()) and the other using the upload function. I need two buffers, 
+*/
+
 void setup() {
   // Initialize serial and wait for port to open:
   Serial.begin(115200);
@@ -20,6 +30,7 @@ void setup() {
 
 void loop() {
   //Managing WiFi connection
+  static int response;
   status = WiFi.status();
   // Serial.println("WiFi status: ");
   // Serial.println(status);
@@ -28,23 +39,10 @@ void loop() {
     // Serial.println("IP address: ");
     // Serial.println(WiFi.localIP());
   }
-  // wifi_scan();
-    
-  // current_state = fsmButton(BUTTON_PIN, current_state);
-
-  // int32_t sample = I2S.read();
-  // Serial.println(sample);
-  
-  // Serial.print(millis());
-  // Serial.print(" ");
-  // Serial.println(current_state);
-  // Serial.println(past_state);
-  //recording fsm (contains uploading logic)
-  int response = fsmrecordAndUpload(current_state);
+  response = fsmrecordAndUpload();
   if (response != -1) {
     Serial.print("Supabase response: ");
     Serial.println(response);
   }
-  past_state = current_state;
 }
 

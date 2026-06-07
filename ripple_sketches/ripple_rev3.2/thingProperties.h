@@ -3,15 +3,17 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include "wifi_connect.h"
-// #include <ESP_I2S.h>
 #include "config.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
 
 //Mic recording definitions
 #define V_REF 3.3
 #define SAMPLE_RATE 16000 //Samples per second
 #define BYTES_PER_RAW_SAMPLE 4
 #define BYTES_PER_FULL_SAMPLE 3
-#define CHUNK_SECONDS 2
+#define CHUNK_SECONDS 0.5
 #define SAMPLES_PER_CHUNK (SAMPLE_RATE*CHUNK_SECONDS)
 #define RAW_CHUNK_BYTES (SAMPLES_PER_CHUNK * BYTES_PER_RAW_SAMPLE)
 #define FULL_CHUNK_BYTES (SAMPLES_PER_CHUNK * BYTES_PER_FULL_SAMPLE)
@@ -42,8 +44,10 @@ void initProperties(){
   // }
 
   //Create PSRAM buffer
-  audio_buffer = (uint8_t*)ps_malloc(FULL_CHUNK_BYTES);
-  raw_buffer = (int32_t *)ps_malloc(RAW_CHUNK_BYTES);
+  Serial.println((int) FULL_CHUNK_BYTES);
+  Serial.println((int) RAW_CHUNK_BYTES);
+  audio_buffer = (uint8_t*)ps_malloc((int) FULL_CHUNK_BYTES);
+  raw_buffer = (int32_t *)ps_malloc((int) RAW_CHUNK_BYTES);
   if (!audio_buffer && !raw_buffer) {
     Serial.println("PSRAM allocation failed");
     while (1);
