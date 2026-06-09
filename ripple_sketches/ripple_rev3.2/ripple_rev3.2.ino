@@ -3,17 +3,7 @@
 #pragma once
 
 #include "thingProperties.h"
-#include "wifi_connect.h"
-
-/*
-NEW TASK PROCESS
-I want to use two separate tasks in order to make recording and sending more
-seamless. I want to have one task that will record half-second clips and another 
-that will send those clips. THIS ONLY WORKS IF THE SECOND TASK TAKES LESS THAN HALF
-A SECOND TO SEND. 
-I need to design each task, one using a record and amplify function (right now in
-fsmRecordandUpload()) and the other using the upload function. I need two buffers, 
-*/
+// #include "wifi_connect.h"
 
 void setup() {
   // Initialize serial and wait for port to open:
@@ -30,19 +20,26 @@ void setup() {
 
 void loop() {
   //Managing WiFi connection
-  static int response;
-  status = WiFi.status();
-  // Serial.println("WiFi status: ");
-  // Serial.println(status);
-  if (status != WL_CONNECTED) {
-    status = reconnect(ssid, password);
-    // Serial.println("IP address: ");
-    // Serial.println(WiFi.localIP());
+  // static int response;
+  // status = WiFi.status();
+  // // Serial.println("WiFi status: ");
+  // // Serial.println(status);
+  // if (status != WL_CONNECTED) {
+  //   status = reconnect(ssid, password);
+  //   // Serial.println("IP address: ");
+  //   // Serial.println(WiFi.localIP());
+  // }
+  // response = fsmrecordAndUpload();
+  // if (response != -1) {
+  //   Serial.print("Supabase response: ");
+  //   Serial.println(response);
+  // }
+  if (phone_connected) {
+    String msg = "Hello from Ripple Glasses!";
+    pTxCharacteristic->setValue(msg.c_str());
+    pTxCharacteristic->notify();
+    Serial.println("TX message sent");
   }
-  response = fsmrecordAndUpload();
-  if (response != -1) {
-    Serial.print("Supabase response: ");
-    Serial.println(response);
-  }
+  delay(2000);
 }
 
