@@ -13,7 +13,7 @@
 #define SAMPLE_RATE 16000 //Samples per second
 #define BYTES_PER_RAW_SAMPLE 4
 #define BYTES_PER_FULL_SAMPLE 3
-#define CHUNK_SECONDS 0.5
+#define CHUNK_SECONDS 2
 #define SAMPLES_PER_CHUNK (SAMPLE_RATE*CHUNK_SECONDS)
 #define RAW_CHUNK_BYTES (SAMPLES_PER_CHUNK * BYTES_PER_RAW_SAMPLE)
 #define FULL_CHUNK_BYTES (SAMPLES_PER_CHUNK * BYTES_PER_FULL_SAMPLE)
@@ -28,9 +28,11 @@ const String access_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 HTTPClient home;
 
+QueueHandle_t send_queue;
+QueueHandle_t free_queue;
+
 int32_t* raw_buffer = NULL;
 uint8_t * audio_buffer = NULL;
-
 
 void initProperties(){
   //Configure button
@@ -48,6 +50,7 @@ void initProperties(){
   Serial.println((int) RAW_CHUNK_BYTES);
   audio_buffer = (uint8_t*)ps_malloc((int) FULL_CHUNK_BYTES);
   raw_buffer = (int32_t *)ps_malloc((int) RAW_CHUNK_BYTES);
+  
   if (!audio_buffer && !raw_buffer) {
     Serial.println("PSRAM allocation failed");
     while (1);
@@ -94,19 +97,13 @@ void amp_cov(int32_t* r_buffer, uint8_t* a_buffer) {
   }
 }
 
-int fsmrecordAndUpload() {
-  static int response = -1;
+void record() {
   String obj_key;
   size_t bytes_read = 0;
   size_t bytes_collected = 0;
-  while (bytes_collected < RAW_CHUNK_BYTES) {
+  do {
     i2s_read(I2S_PORT, raw_buffer, RAW_CHUNK_BYTES, &bytes_read, portMAX_DELAY);
     bytes_collected += bytes_read;
-  }
-  amp_cov(raw_buffer, audio_buffer);
-  obj_key =   "0.wav"; //(String)(name%2)+
-  response = upload_audio(home, url+audio_ext+obj_key, audio_buffer, FULL_CHUNK_BYTES, access_key);
-  return response;
-  
+  } while (bytes_collected < RAW_CHUNK_BYTES);
 }
 
