@@ -35,6 +35,7 @@ void loop() {
   //   Serial.println(response);
   // }
   if (phone_connected) {
+    Serial.println(pServer->getPeerMTU())
     String msg = "Hello from Ripple Glasses!";
     pTxCharacteristic->setValue(msg.c_str());
     pTxCharacteristic->notify();

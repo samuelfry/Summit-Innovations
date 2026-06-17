@@ -20,9 +20,9 @@
 //Wifi/Database keys
 const char* ssid = "TP-LINK_AB77"; //TP-LINK_AB77 //BYU-WiFi //SamuelF
 const char* password = "21940521"; //21940521 //samb@r@y
-const String url = "https://gctbnsjsridmsilzqtpq.storage.supabase.co/storage/v1/object";
-const String audio_ext = "/audio/public/file_";
-const String access_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdGJuc2pzcmlkbXNpbHpxdHBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNjM0ODksImV4cCI6MjA5MDYzOTQ4OX0.T7OdeAuH0AM0a8YdzWAcwH1e6rkGFaL4stL4DWttbZg";
+// const String url = "https://gctbnsjsridmsilzqtpq.storage.supabase.co/storage/v1/object";
+// const String audio_ext = "/audio/public/file_";
+// const String access_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdGJuc2pzcmlkbXNpbHpxdHBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNjM0ODksImV4cCI6MjA5MDYzOTQ4OX0.T7OdeAuH0AM0a8YdzWAcwH1e6rkGFaL4stL4DWttbZg";
 
 // HTTPClient home;
 
