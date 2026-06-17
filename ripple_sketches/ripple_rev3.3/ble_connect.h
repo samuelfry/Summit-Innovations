@@ -15,18 +15,15 @@ BLECharacteristic* pTxCharacteristic;
 BLEService* pService;
 BLECharacteristic* pRxCharacteristic;
 bool phone_connected = false;
-int conn_id;
 
 class ServerCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer* pServer, esp_ble_gatts_cb_param_t* param) {
+  void onConnect(BLEServer* pServer) {
     phone_connected = true;
-    conn_id = param->connect.conn_id;
     Serial.println("Phone connected");
   }
 
   void onDisconnect(BLEServer* pServer) {
     phone_connected = false;
-    conn_id = 0;
     Serial.println("Phone disconnected");
     BLEDevice::startAdvertising();
     Serial.println("Restarted advertising — ready for new connection");

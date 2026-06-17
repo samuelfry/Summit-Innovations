@@ -14,6 +14,8 @@ void setup() {
   // Defined in thingProperties.h
   initProperties();
   // We start by connecting to a WiFi network
+
+
 }
 
 void loop() {
@@ -33,9 +35,9 @@ void loop() {
   //   Serial.println(response);
   // }
   if (phone_connected) {
-    Serial.println(pServer->getPeerMTU(conn_id));
+    Serial.println(pServer->getPeerMTU())
     String msg = "Hello from Ripple Glasses!";
-    pTxCharacteristic->setValue((uint8_t*) msg.c_str(), (size_t) msg.length());
+    pTxCharacteristic->setValue(msg.c_str());
     pTxCharacteristic->notify();
     Serial.println("TX message sent");
   }
