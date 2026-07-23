@@ -73,11 +73,13 @@ int upload_audio(HTTPClient& database, const String& path, uint8_t* buffer, size
   database.addHeader("Content-Type", "audio/wav");
   database.addHeader("Authorization", "Bearer " + access_key);
   database.addHeader("apikey", access_key);
-  // database.addHeader("x-upsert", "true");
+  database.addHeader("x-upsert", "true");
   uint8_t* fullfile = (uint8_t*)malloc(44+size);
   memcpy(fullfile, header, 44);
   memcpy(fullfile+44, buffer, size);
-  int code = database.PUT(fullfile, size+44);
+  int code = database.POST(fullfile, size+44);
+  String response = database.getString();
+  // Serial.printf("HTTP %d, %s\n", code, response.c_str());
   free(fullfile);
   database.end();
   return code;

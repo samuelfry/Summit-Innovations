@@ -20,8 +20,8 @@
 #define VOLUME_GAIN 0
 
 //Wifi/Database keys
-const char* ssid = "TP-LINK_AB77"; //TP-LINK_AB77 //BYU-WiFi //SamuelF
-const char* password = "21940521"; //21940521 //samb@r@y
+const char* ssid = "BYU-WiFi"; //TP-LINK_AB77 //BYU-WiFi //SamuelF
+const char* password = ""; //21940521 //samb@r@y
 const String url = "https://gctbnsjsridmsilzqtpq.storage.supabase.co/storage/v1/object";
 const String audio_ext = "/audio/public/file_";
 const String access_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjdGJuc2pzcmlkbXNpbHpxdHBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNjM0ODksImV4cCI6MjA5MDYzOTQ4OX0.T7OdeAuH0AM0a8YdzWAcwH1e6rkGFaL4stL4DWttbZg";
@@ -102,7 +102,7 @@ void record() {
   size_t bytes_read = 0;
   size_t bytes_collected = 0;
   do {
-    i2s_read(I2S_PORT, raw_buffer, RAW_CHUNK_BYTES, &bytes_read, portMAX_DELAY);
+    i2s_read(I2S_PORT, raw_buffer + bytes_collected, RAW_CHUNK_BYTES, &bytes_read, portMAX_DELAY);
     bytes_collected += bytes_read;
   } while (bytes_collected < RAW_CHUNK_BYTES);
 }

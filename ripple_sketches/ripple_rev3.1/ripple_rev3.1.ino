@@ -20,7 +20,7 @@ void setup() {
 
 void loop() {
   //Managing WiFi connection
-  static int reponse;
+  static int response;
   status = WiFi.status();
   // Serial.println("WiFi status: ");
   // Serial.println(status);
